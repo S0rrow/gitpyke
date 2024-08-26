@@ -70,7 +70,7 @@ async def github_webhook(request: Request):
     
     smtp_config, email_config, branch_config = load_smtp_config()
     
-    branches_to_watch = ", ".join(branch_config['branches'])
+    branches_to_watch = ", ".join(branch_config['overwatch'])
     
     # 지정된 브랜치 중 하나인지 확인
     if branch_name in branches_to_watch.split(", "):
