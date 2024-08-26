@@ -1,19 +1,29 @@
-# 🎈 Blank app template
+# RESTful API application for Github Webhook
 
-A simple Streamlit app template for you to modify!
+## SMTP Credentials
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+Informations for smtp will be saved in `secrets.json`, which is ignored by gitignore.
 
-### How to run it on your own machine
+Currently only supports Gmail smtp with IMAP.
 
-1. Install the requirements
+It's internal format should look like this.
 
-   ```
-   $ pip install -r requirements.txt
-   ```
+```json
+{
+    "smtp": {
+        "imap_server": "imap.gmail.com",
+        "imap_port": 993,
+        "smtp_server": "smtp.gmail.com",
+        "smtp_port": 587,
+        "username": "your_email@gmail.com",
+        "password": "your_app_password",
+        "display_name": "your_display_name"
+    },
+    "emails":{
+        "recipients":[
+            "your_recipient@gmail.com"
+        ]
+    }
+}
+```
 
-2. Run the app
-
-   ```
-   $ streamlit run streamlit_app.py
-   ```
