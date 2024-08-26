@@ -72,9 +72,9 @@ async def github_webhook(request: Request):
     
     branches_to_watch = ", ".join(branch_config['overwatch'])
     
-    # 지정된 브랜치 중 하나인지 확인
+    # check if branch push event occurred is in list to watch over
     if branch_name in branches_to_watch.split(", "):
-        subject = f"GitHub 푸시 이벤트 - 브랜치 '{branch_name}'"
+        subject = f"GitHub Push Event occurred in '{branch_name}'"
         body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
                 f"Pushed By: {payload.get('pusher', {}).get('name', 'Unknown')}\n"
                 f"Branch: {branch_name}\n"
