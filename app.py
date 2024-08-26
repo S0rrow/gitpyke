@@ -44,10 +44,10 @@ def verify_signature(signature: str, payload: str) -> bool:
 async def log_requests(request: Request, call_next):
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
-    logger.info(f"Received request: {request.method} {request.url}")
-    logger.info(f"Headers: {request.headers}")
+    logger.debug(f"Received request: {request.method} {request.url}")
+    logger.debug(f"Headers: {request.headers}")
     body = await request.body()
-    logger.info(f"Body: {body.decode()}")
+    logger.debug(f"Body: {body.decode()}")
     response = await call_next(request)
     return response
 
