@@ -23,6 +23,11 @@ It's internal format should look like this.
         "recipients":[
             "your_recipient@gmail.com"
         ]
+    },
+    "branches":{
+        "overwatch":[
+            "main"
+        ]
     }
 }
 ```
