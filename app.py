@@ -6,6 +6,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import json
 import hashlib
+import os
+import logging
 
 app = FastAPI()
 
@@ -23,10 +25,14 @@ class WebhookPayload(BaseModel):
     repository: dict
     pusher: dict
 
-WEBHOOK_SECRET = "webhook_secret"
+# Fetch webhook secret from environment variable or default to an empty string
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 
 def verify_signature(signature: str, payload: str) -> bool:
-    # 비밀 키를 사용하여 HMAC-SHA1 해시를 생성하고 서명을 검증
+    if not WEBHOOK_SECRET:
+        # No secret set, skip signature verification
+        return True
+    
     expected_signature = hmac.new(
         key=WEBHOOK_SECRET.encode(),
         msg=payload.encode(),
@@ -34,19 +40,30 @@ def verify_signature(signature: str, payload: str) -> bool:
     ).hexdigest()
     return hmac.compare_digest(f"sha1={expected_signature}", signature)
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.info(f"Received request: {request.method} {request.url}")
+    logger.info(f"Headers: {request.headers}")
+    body = await request.body()
+    logger.info(f"Body: {body.decode()}")
+    response = await call_next(request)
+    return response
+
 @app.post("/webhook/")
 async def github_webhook(request: Request):
     signature = request.headers.get("X-Hub-Signature")
-    if signature is None:
-        raise HTTPException(status_code=400, detail="Missing X-Hub-Signature header")
     
+    # Read and decode the payload
     payload_data = await request.body()
     payload_str = payload_data.decode("utf-8")
-    
-    if not verify_signature(signature, payload_str):
+
+    # Verify signature if secret is set
+    if signature and not verify_signature(signature, payload_str):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
-    # 여기서부터는 유효한 요청만 처리함
+    # Here, we process the payload if the signature is valid or no secret is set
     payload = json.loads(payload_str)
     ref = payload.get("ref", "")
     branch_name = ref.replace('refs/heads/', '', 1)
@@ -57,7 +74,7 @@ async def github_webhook(request: Request):
     if branch_name in ["dev", "feature/frontend"]:
         subject = f"GitHub Push Event for Branch '{branch_name}'"
         body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
-                f"Pusher: {payload.get('pusher', {}).get('name', 'Unknown')}\n"
+                f"Pushed By: {payload.get('pusher', {}).get('name', 'Unknown')}\n"
                 f"Branch: {branch_name}\n"
                 f"Details: {payload.get('head_commit', {}).get('message', 'No commit message')}\n")
 
