@@ -16,7 +16,7 @@ def load_smtp_config():
     try:
         with open("secrets.json") as f:
             secrets = json.load(f)
-            return secrets["smtp"], secrets["emails"]
+            return secrets["smtp"], secrets["emails"], secrets["branches"]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading secrets: {e}")
 
@@ -68,11 +68,13 @@ async def github_webhook(request: Request):
     ref = payload.get("ref", "")
     branch_name = ref.replace('refs/heads/', '', 1)
     
-    smtp_config, email_config = load_smtp_config()
+    smtp_config, email_config, branch_config = load_smtp_config()
     
-    # Check if the branch is one of the specified branches
-    if branch_name in ["dev", "feature/frontend"]:
-        subject = f"GitHub Push Event for Branch '{branch_name}'"
+    branches_to_watch = ", ".join(branch_config['branches'])
+    
+    # 지정된 브랜치 중 하나인지 확인
+    if branch_name in branches_to_watch.split(", "):
+        subject = f"GitHub 푸시 이벤트 - 브랜치 '{branch_name}'"
         body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
                 f"Pushed By: {payload.get('pusher', {}).get('name', 'Unknown')}\n"
                 f"Branch: {branch_name}\n"
