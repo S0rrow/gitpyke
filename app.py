@@ -74,8 +74,8 @@ async def github_push_webhook(request: Request):
     payload = await validate_webhook(request)
     smtp_config, email_config, branch_config = load_smtp_config()
     
-    # if event is not push, return
-    if payload.get("event_name", "") != "push":
+    # Check if the event is a push event
+    if "pusher" not in payload:
         return {"message": "Not a push event, no action taken"}
     
     ref = payload.get("ref", "")
@@ -98,8 +98,8 @@ async def github_issue_webhook(request: Request):
     payload = await validate_webhook(request)
     smtp_config, email_config, _ = load_smtp_config()
     # if event is not issue, return
-    if payload.get("event_name", "") != "issue":
-        return {"message": "Not an issue event, no action taken"}
+    if payload.get("action") is None or "issue" not in payload:
+        return {"message": "Invalid issue event payload"}
     
     action = payload.get("action", "")
     if action not in ["opened", "closed", "assigned", "reopened"]:
@@ -119,9 +119,9 @@ async def github_vulnerability_webhook(request: Request):
     payload = await validate_webhook(request)
     smtp_config, email_config, _ = load_smtp_config()
     
-    # if event is not repository_vulnerability, return
-    if payload.get("event_name", "") != "repository_vulnerability":
-        return {"message": "Not a repository vulnerability event, no action taken"}
+    # Check if the event is a repository vulnerability alert
+    if payload.get("alert", {}).get("external_identifier") is None:
+        return {"message": "Not a repository vulnerability alert event, no action taken"}
     
     subject = f"GitHub Repository Vulnerability Alert"
     body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
@@ -136,8 +136,8 @@ async def github_pull_request_webhook(request: Request):
     payload = await validate_webhook(request)
     smtp_config, email_config, _ = load_smtp_config()
     
-    # if event is not pull_request, return
-    if payload.get("event_name", "") != "pull_request":
+    # Check if the event is a pull request
+    if "pull_request" not in payload:
         return {"message": "Not a pull request event, no action taken"}
     
     action = payload.get("action", "")
