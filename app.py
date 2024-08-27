@@ -88,8 +88,8 @@ def send_email(smtp_config, email_config, subject, body, recipients=None)->bool:
     if recipients is None:
         msg['To'] = ", ".join(email_config['recipients'])
     else:
-        # recipients is list of nicknames, where email_config['nicknames'] is dict of {nickname: email}
-        msg['To'] = ", ".join([email_config['nicknames'][nickname] for nickname in recipients])
+        # recipients is list of nicknames, where email_config['emails'].get('nicknames') is dict of {nickname: email}
+        msg['To'] = ", ".join([email_config['emails'].get('nicknames', {}).get(nickname, nickname) for nickname in recipients])
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
     try:
