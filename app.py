@@ -106,7 +106,8 @@ async def github_issue_webhook(request: Request):
         return {"message": "Issue event ignored"}
     # apply action to subject with only first letter capitalized
     action = action.capitalize()
-    subject = f"GitHub Issue Event {action}"
+    done_by = payload.get("sender", {}).get("login", "Unknown")
+    subject = f"GitHub Issue Event {action} by {done_by}"
     body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
             f"Issue: {payload.get('issue', {}).get('title', 'Unknown')}\n"
             f"Details: {payload.get('issue', {}).get('body', 'No body')}\n"
@@ -122,8 +123,9 @@ async def github_vulnerability_webhook(request: Request):
     # Check if the event is a repository vulnerability alert
     if payload.get("alert", {}).get("external_identifier") is None:
         return {"message": "Not a repository vulnerability alert event, no action taken"}
+    branch_name = payload.get("repository", {}).get("default_branch", "Unknown")
     
-    subject = f"GitHub Repository Vulnerability Alert"
+    subject = f"GitHub Repository Vulnerability Alert occurred in '{branch_name}'"
     body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
             f"Vulnerability: {payload.get('vulnerability', {}).get('package', {}).get('name', 'Unknown')}\n"
             f"Details: {payload.get('vulnerability', {}).get('advisory', {}).get('summary', 'No summary')}\n"
@@ -143,9 +145,9 @@ async def github_pull_request_webhook(request: Request):
     action = payload.get("action", "")
     if action not in ["opened", "closed", "commented", "reopened"]:
         return {"message": "Pull request event ignored"}
-    
+    done_by = payload.get("sender", {}).get("login", "Unknown")
     action = action.capitalize()
-    subject = f"GitHub Pull Request Event {action}"
+    subject = f"GitHub Pull Request {action} by {done_by}"
     body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
             f"Pull Request: {payload.get('pull_request', {}).get('title', 'Unknown')}\n"
             f"Details: {payload.get('pull_request', {}).get('body', 'No body')}\n"
