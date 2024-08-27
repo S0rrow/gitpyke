@@ -88,8 +88,8 @@ def send_email(smtp_config, email_config, subject, body, recipients=None)->bool:
     if recipients is None:
         msg['To'] = ", ".join(email_config['recipients'])
     else:
-        # recipients is list of nicknames, where email_config['emails'].get('nicknames') is dict of {nickname: email}
-        msg['To'] = ", ".join([email_config['emails'].get('nicknames', {}).get(nickname, nickname) for nickname in recipients])
+        # recipients is list of nicknames, where email_config['nicknames'] is dict of {nickname: email}
+        msg['To'] = ", ".join([email_config['nicknames'][nickname] for nickname in recipients])
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
     try:
@@ -147,8 +147,7 @@ async def github_issue_webhook(request: Request):
     if len(assignees) == 0:
         return {"message": "Issue not assigned to anyone, no action taken"}
     
-    # json structure for email config is emails.nicknames.{nickname:email}
-    assignee_nicknames = [email_config['emails'].get('nicknames', {}).get(assignee, assignee) for assignee in assignees]
+    assignee_nicknames = [email_config['nicknames'].get(assignee, assignee) for assignee in assignees]
     recipients = assignee_nicknames
     # apply action to subject with only first letter capitalized
     action = action.capitalize()
