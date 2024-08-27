@@ -69,7 +69,7 @@ def send_email_and_respond(smtp_config, email_config, subject, body, recipients=
         else:
             return {"message": "Email not sent"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Exception occurred while sending email and responding: {e}")
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
