@@ -157,7 +157,11 @@ async def validate_webhook(request: Request):
 
     if signature and not verify_signature(signature, payload_str):
         raise HTTPException(status_code=401, detail="Invalid signature")
-
+    # check if payload is valid json
+    try:
+        json.loads(payload_str)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid payload")
     return json.loads(payload_str)
 
 def send_email_and_respond(smtp_config, email_config, subject, body):
