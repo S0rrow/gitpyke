@@ -147,7 +147,8 @@ async def github_issue_webhook(request: Request):
     if len(assignees) == 0:
         return {"message": "Issue not assigned to anyone, no action taken"}
     
-    assignee_nicknames = [email_config['nicknames'].get(assignee, assignee) for assignee in assignees]
+    # json structure for email config is emails.nicknames.{nickname:email}
+    assignee_nicknames = [email_config['emails'].get('nicknames', {}).get(assignee, assignee) for assignee in assignees]
     recipients = assignee_nicknames
     # apply action to subject with only first letter capitalized
     action = action.capitalize()
