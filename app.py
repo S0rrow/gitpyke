@@ -88,9 +88,7 @@ def send_email(smtp_config, email_config, subject, body, recipients=None)->bool:
     if recipients is None:
         msg['To'] = ", ".join(email_config['recipients'])
     else:
-        # recipients is list of nicknames, where email_config['nicknames'] is dict of {nickname: email}
-        # while parsing, try removing extra characters back and forth of each emails
-        msg['To'] = ", ".join([email_config['nicknames'][nickname.strip().strip("'")] for nickname in recipients])
+        msg['To'] = ", ".join([email_config['nicknames'].get(nickname.strip()) for nickname in recipients if nickname.strip() in email_config['nicknames']])
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
     try:
@@ -103,7 +101,7 @@ def send_email(smtp_config, email_config, subject, body, recipients=None)->bool:
         server.quit()
         return True
     except Exception as e:
-        raise e
+        raise HTTPException(status_code=500, detail=f"Exception occurred while sending email to designated recipients: {e}")
     
 @app.post("/push/")
 async def github_push_webhook(request: Request):
