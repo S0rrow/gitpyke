@@ -104,8 +104,9 @@ async def github_issue_webhook(request: Request):
     action = payload.get("action", "")
     if action not in ["opened", "closed", "assigned", "reopened"]:
         return {"message": "Issue event ignored"}
-    
-    subject = f"GitHub Issue Event occurred"
+    # apply action to subject with only first letter capitalized
+    action = action.capitalize()
+    subject = f"GitHub Issue Event {action}"
     body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
             f"Issue: {payload.get('issue', {}).get('title', 'Unknown')}\n"
             f"Details: {payload.get('issue', {}).get('body', 'No body')}\n"
@@ -143,10 +144,12 @@ async def github_pull_request_webhook(request: Request):
     if action not in ["opened", "closed", "commented", "reopened"]:
         return {"message": "Pull request event ignored"}
     
-    subject = f"GitHub Pull Request Event occurred"
+    action = action.capitalize()
+    subject = f"GitHub Pull Request Event {action}"
     body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
             f"Pull Request: {payload.get('pull_request', {}).get('title', 'Unknown')}\n"
-            f"Details: {payload.get('pull_request', {}).get('body', 'No body')}\n")
+            f"Details: {payload.get('pull_request', {}).get('body', 'No body')}\n"
+            f"Link: {payload.get('pull_request', {}).get('url', 'No link')}\n")
     
     return send_email_and_respond(smtp_config, email_config, subject, body)
 
