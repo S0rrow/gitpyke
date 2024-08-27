@@ -51,52 +51,105 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     return response
 
-@app.post("/webhook/")
-async def github_webhook(request: Request):
-    signature = request.headers.get("X-Hub-Signature")
+def send_email(smtp_config, email_config, subject, body)->bool:
+    msg = MIMEMultipart()
+    msg['From'] = smtp_config['username']
+    msg['To'] = ", ".join(email_config['recipients'])
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+    try:
+        # Send email
+        server = smtplib.SMTP(smtp_config['smtp_server'], smtp_config['smtp_port'])
+        server.starttls()  # Secure the connection
+        server.login(smtp_config['username'], smtp_config['password'])
+        text = msg.as_string()
+        server.sendmail(smtp_config['username'], email_config['recipients'], text)
+        server.quit()
+        return True
+    except Exception as e:
+        raise e
+
+@app.post("/push/")
+async def github_push_webhook(request: Request):
+    payload = await validate_webhook(request)
+    smtp_config, email_config, branch_config = load_smtp_config()
     
-    # Read and decode the payload
+    ref = payload.get("ref", "")
+    branches_to_watch = ", ".join(branch_config['overwatch'])
+    branch_name = ref.replace('refs/heads/', '', 1)
+    
+    if branch_name not in branches_to_watch.split(", "):
+        return {"message": "Branch not monitored, no action taken"}
+    
+    subject = f"GitHub Push Event occurred in '{branch_name}'"
+    body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
+            f"Pushed By: {payload.get('pusher', {}).get('name', 'Unknown')}\n"
+            f"Branch: {branch_name}\n"
+            f"Details: {payload.get('head_commit', {}).get('message', 'No commit message')}\n")
+    
+    return send_email_and_respond(smtp_config, email_config, subject, body)
+
+@app.post("/issue/")
+async def github_issue_webhook(request: Request):
+    payload = await validate_webhook(request)
+    smtp_config, email_config, _ = load_smtp_config()
+    
+    action = payload.get("action", "")
+    if action not in ["opened", "closed", "assigned", "reopened"]:
+        return {"message": "Issue event ignored"}
+    
+    subject = f"GitHub Issue Event occurred"
+    body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
+            f"Issue: {payload.get('issue', {}).get('title', 'Unknown')}\n"
+            f"Details: {payload.get('issue', {}).get('body', 'No body')}\n"
+            f"Link: {payload.get('issue', {}).get('url', 'No link')}\n")
+    
+    return send_email_and_respond(smtp_config, email_config, subject, body)
+
+@app.post("/repository_vulnerability/")
+async def github_vulnerability_webhook(request: Request):
+    payload = await validate_webhook(request)
+    smtp_config, email_config, _ = load_smtp_config()
+    
+    subject = f"GitHub Repository Vulnerability Alert"
+    body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
+            f"Vulnerability: {payload.get('vulnerability', {}).get('package', {}).get('name', 'Unknown')}\n"
+            f"Details: {payload.get('vulnerability', {}).get('advisory', {}).get('summary', 'No summary')}\n"
+            f"Link: {payload.get('vulnerability', {}).get('advisory', {}).get('url', 'No link')}\n")
+    
+    return send_email_and_respond(smtp_config, email_config, subject, body)
+
+@app.post("/pull_request/")
+async def github_pull_request_webhook(request: Request):
+    payload = await validate_webhook(request)
+    smtp_config, email_config, _ = load_smtp_config()
+    
+    action = payload.get("action", "")
+    if action not in ["opened", "closed", "commented", "reopened"]:
+        return {"message": "Pull request event ignored"}
+    
+    subject = f"GitHub Pull Request Event occurred"
+    body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
+            f"Pull Request: {payload.get('pull_request', {}).get('title', 'Unknown')}\n"
+            f"Details: {payload.get('pull_request', {}).get('body', 'No body')}\n")
+    
+    return send_email_and_respond(smtp_config, email_config, subject, body)
+
+async def validate_webhook(request: Request):
+    signature = request.headers.get("X-Hub-Signature")
     payload_data = await request.body()
     payload_str = payload_data.decode("utf-8")
 
-    # Verify signature if secret is set
     if signature and not verify_signature(signature, payload_str):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
-    # Here, we process the payload if the signature is valid or no secret is set
-    payload = json.loads(payload_str)
-    ref = payload.get("ref", "")
-    branch_name = ref.replace('refs/heads/', '', 1)
-    
-    smtp_config, email_config, branch_config = load_smtp_config()
-    
-    branches_to_watch = ", ".join(branch_config['overwatch'])
-    
-    # check if branch push event occurred is in list to watch over
-    if branch_name in branches_to_watch.split(", "):
-        subject = f"GitHub Push Event occurred in '{branch_name}'"
-        body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
-                f"Pushed By: {payload.get('pusher', {}).get('name', 'Unknown')}\n"
-                f"Branch: {branch_name}\n"
-                f"Details: {payload.get('head_commit', {}).get('message', 'No commit message')}\n")
+    return json.loads(payload_str)
 
-        # Prepare email
-        msg = MIMEMultipart()
-        msg['From'] = smtp_config['username']
-        msg['To'] = ", ".join(email_config['recipients'])
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-
-        try:
-            # Send email
-            server = smtplib.SMTP(smtp_config['smtp_server'], smtp_config['smtp_port'])
-            server.starttls()  # Secure the connection
-            server.login(smtp_config['username'], smtp_config['password'])
-            text = msg.as_string()
-            server.sendmail(smtp_config['username'], email_config['recipients'], text)
-            server.quit()
+def send_email_and_respond(smtp_config, email_config, subject, body):
+    try:
+        if send_email(smtp_config, email_config, subject, body):
             return {"message": "Email sent successfully"}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-    
-    return {"message": "Branch not monitored, no action taken"}
+        else:
+            return {"message": "Email not sent"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
