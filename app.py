@@ -107,15 +107,15 @@ def send_email(smtp_config, email_config, subject, body, recipients=None)->bool:
 async def github_push_webhook(request: Request):
     payload = await validate_webhook(request)
     smtp_config, email_config, branch_config = load_smtp_config()
-    recipients = None
-
     # Check if the event is a push event
     if "pusher" not in payload:
         return {"message": "Not a push event, no action taken"}
-    
     ref = payload.get("ref", "")
     branches_to_watch = ", ".join(branch_config['overwatch'])
     branch_name = ref.replace('refs/heads/', '', 1)
+    
+    # send email to all recipients in email_config['nicknames'] without the pusher
+    recipients = [email for email in email_config['nicknames'].values() if email != payload.get('pusher', {}).get('email', 'Unknown')]
     
     if branch_name not in branches_to_watch.split(", "):
         return {"message": "Branch not monitored, no action taken"}
