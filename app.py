@@ -74,6 +74,10 @@ async def github_push_webhook(request: Request):
     payload = await validate_webhook(request)
     smtp_config, email_config, branch_config = load_smtp_config()
     
+    # if event is not push, return
+    if payload.get("event_name", "") != "push":
+        return {"message": "Not a push event, no action taken"}
+    
     ref = payload.get("ref", "")
     branches_to_watch = ", ".join(branch_config['overwatch'])
     branch_name = ref.replace('refs/heads/', '', 1)
@@ -93,6 +97,9 @@ async def github_push_webhook(request: Request):
 async def github_issue_webhook(request: Request):
     payload = await validate_webhook(request)
     smtp_config, email_config, _ = load_smtp_config()
+    # if event is not issue, return
+    if payload.get("event_name", "") != "issue":
+        return {"message": "Not an issue event, no action taken"}
     
     action = payload.get("action", "")
     if action not in ["opened", "closed", "assigned", "reopened"]:
@@ -111,6 +118,10 @@ async def github_vulnerability_webhook(request: Request):
     payload = await validate_webhook(request)
     smtp_config, email_config, _ = load_smtp_config()
     
+    # if event is not repository_vulnerability, return
+    if payload.get("event_name", "") != "repository_vulnerability":
+        return {"message": "Not a repository vulnerability event, no action taken"}
+    
     subject = f"GitHub Repository Vulnerability Alert"
     body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
             f"Vulnerability: {payload.get('vulnerability', {}).get('package', {}).get('name', 'Unknown')}\n"
@@ -123,6 +134,10 @@ async def github_vulnerability_webhook(request: Request):
 async def github_pull_request_webhook(request: Request):
     payload = await validate_webhook(request)
     smtp_config, email_config, _ = load_smtp_config()
+    
+    # if event is not pull_request, return
+    if payload.get("event_name", "") != "pull_request":
+        return {"message": "Not a pull request event, no action taken"}
     
     action = payload.get("action", "")
     if action not in ["opened", "closed", "commented", "reopened"]:
