@@ -147,7 +147,9 @@ async def github_issue_webhook(request: Request):
     if len(assignees) == 0:
         return {"message": "Issue not assigned to anyone, no action taken"}
     # email_config['nicknames'] is dict of {nickname: email} where each nickname and email is string
-    assignee_nicknames = [email_config['nicknames'].get(assignee, None) for assignee in assignees]
+    #assignee_nicknames = [email_config['nicknames'].get(assignee, None) for assignee in assignees]
+    # TypeError: unhashable type: 'dict'
+    assignee_nicknames = [email_config['nicknames'].get(assignee['login'], None) for assignee in assignees]
     # remove None from assignee_nicknames
     assignee_nicknames = [nickname for nickname in assignee_nicknames if nickname is not None]
     recipients = assignee_nicknames
