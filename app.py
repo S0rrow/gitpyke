@@ -89,7 +89,8 @@ def send_email(smtp_config, email_config, subject, body, recipients=None)->bool:
         msg['To'] = ", ".join(email_config['recipients'])
     else:
         # recipients is list of nicknames, where email_config['nicknames'] is dict of {nickname: email}
-        msg['To'] = ", ".join([email_config['nicknames'][nickname] for nickname in recipients])
+        # while parsing, try removing extra characters back and forth of each emails
+        msg['To'] = ", ".join([email_config['nicknames'][nickname.strip().strip("'")] for nickname in recipients])
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
     try:
