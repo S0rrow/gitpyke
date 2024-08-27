@@ -119,12 +119,15 @@ async def github_push_webhook(request: Request):
     
     if branch_name not in branches_to_watch.split(", "):
         return {"message": "Branch not monitored, no action taken"}
-    
+    # if push event occur, also send details of file changes of that commit, specifying modified, added, and removed files
     subject = f"GitHub Push Event occurred in '{branch_name}'"
     body = (f"Repository: {payload.get('repository', {}).get('full_name', 'Unknown')}\n"
             f"Pushed By: {payload.get('pusher', {}).get('name', 'Unknown')}\n"
             f"Branch: {branch_name}\n"
-            f"Details: {payload.get('head_commit', {}).get('message', 'No commit message')}\n")
+            f"Details: {payload.get('head_commit', {}).get('message', 'No commit message')}\n"
+            f"Modified Files: {payload.get('head_commit', {}).get('modified', [])}\n"
+            f"Added Files: {payload.get('head_commit', {}).get('added', [])}\n"
+            f"Removed Files: {payload.get('head_commit', {}).get('removed', [])}\n")
     
     return send_email_and_respond(smtp_config, email_config, subject, body, recipients)
 
