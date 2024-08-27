@@ -136,11 +136,17 @@ async def github_vulnerability_webhook(request: Request):
 @app.post("/pull_request/")
 async def github_pull_request_webhook(request: Request):
     payload = await validate_webhook(request)
-    smtp_config, email_config, _ = load_smtp_config()
-    
+    smtp_config, email_config, branch_config = load_smtp_config()
+    branches_to_watch = ", ".join(branch_config['overwatch'])
     # Check if the event is a pull request
     if "pull_request" not in payload:
         return {"message": "Not a pull request event, no action taken"}
+    
+    # check the branch name where pull request is created
+    branch_name = payload.get("pull_request", {}).get("base", {}).get("ref", "Unknown")
+    # if branch name is not in the list of branches to watch, return
+    if branch_name not in branches_to_watch.split(", "):
+        return {"message": "Branch not monitored, no action taken"}
     
     action = payload.get("action", "")
     if action not in ["opened", "closed", "commented", "reopened"]:
