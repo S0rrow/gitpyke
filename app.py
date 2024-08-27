@@ -142,8 +142,8 @@ async def github_issue_webhook(request: Request):
     action = payload.get("action", "")
     if action not in ["opened", "closed", "assigned", "reopened"]:
         return {"message": "Issue event ignored"}
-    
-    assignees = payload.get("assignees", [])
+    # assignees is inside issue
+    assignees = payload.get("issue", {}).get("assignees", [])
     if len(assignees) == 0:
         return {"message": "Issue not assigned to anyone, no action taken"}
     
